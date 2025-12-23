@@ -1,0 +1,834 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>پنل مدیریت - کافه رایکا</title>
+  <link rel="icon" type="image/x-icon" href="/images/fav.png">
+  <link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* صفحه لاگین */
+    .login-page {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(135deg, #303E19 0%, #0d4715 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .login-page.show {
+      display: flex;
+    }
+
+    .login-container {
+      background: white;
+      padding: 40px;
+      border-radius: 12px;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+      width: 100%;
+      max-width: 400px;
+      text-align: center;
+    }
+
+    .login-container h1 {
+      color: #303E19;
+      margin-bottom: 30px;
+      font-size: 1.8em;
+    }
+
+    .login-form {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .login-form input {
+      padding: 12px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-size: 1em;
+      font-family: inherit;
+      text-align: right;
+    }
+
+    .login-form input:focus {
+      outline: none;
+      border-color: #303E19;
+      box-shadow: 0 0 0 3px rgba(48, 62, 25, 0.1);
+    }
+
+    .login-form button {
+      padding: 12px;
+      background: #303E19;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-size: 1em;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.3s;
+      font-family: inherit;
+    }
+
+    .login-form button:hover {
+      background: #0d4715;
+    }
+
+    .login-error {
+      color: #d32f2f;
+      font-size: 0.9em;
+      margin-top: 10px;
+      display: none;
+    }
+
+    /* صفحه داشبورد */
+    .admin-dashboard {
+      display: none;
+    }
+
+    .admin-dashboard.show {
+      display: block;
+    }
+
+    .admin-header {
+      background: linear-gradient(135deg, #303E19 0%, #0d4715 100%);
+      color: white;
+      padding: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .admin-header h1 {
+      font-size: 1.8em;
+    }
+
+    .logout-btn {
+      background: rgba(255,255,255,0.2);
+      color: white;
+      border: 2px solid white;
+      padding: 10px 20px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.3s;
+      font-family: inherit;
+    }
+
+    .logout-btn:hover {
+      background: white;
+      color: #303E19;
+    }
+
+    .admin-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .admin-tabs {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      border-bottom: 2px solid #D7D168;
+    }
+
+    .admin-tab-btn {
+      padding: 12px 20px;
+      background: transparent;
+      border: none;
+      font-size: 1em;
+      font-weight: 600;
+      cursor: pointer;
+      color: #666;
+      transition: all 0.3s;
+      font-family: inherit;
+      border-bottom: 3px solid transparent;
+      margin-bottom: -2px;
+    }
+
+    .admin-tab-btn.active {
+      color: #303E19;
+      border-bottom-color: #D7D168;
+    }
+
+    .admin-tab-content {
+      display: none;
+      animation: fadeIn 0.3s;
+    }
+
+    .admin-tab-content.show {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    /* بخش مدیریت آیتم ها */
+    .items-management {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .add-item-form {
+      background: #f5f5f5;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .form-group label {
+      font-weight: 600;
+      color: #333;
+      font-size: 0.9em;
+    }
+
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      padding: 10px;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      font-family: inherit;
+      font-size: 0.95em;
+      text-align: right;
+    }
+
+    .form-group textarea {
+      resize: vertical;
+      min-height: 80px;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: #303E19;
+      box-shadow: 0 0 0 3px rgba(48, 62, 25, 0.1);
+    }
+
+    .add-item-btn {
+      padding: 12px 20px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.3s;
+      font-family: inherit;
+      align-self: flex-end;
+    }
+
+    .add-item-btn:hover {
+      background: #45a049;
+    }
+
+    /* جدول آیتم ها */
+    .items-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    .items-table thead {
+      background: #f5f5f5;
+    }
+
+    .items-table th,
+    .items-table td {
+      padding: 12px;
+      text-align: right;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .items-table th {
+      font-weight: 600;
+      color: #333;
+    }
+
+    .items-table tbody tr:hover {
+      background: #f9f9f9;
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 8px;
+      justify-content: flex-start;
+    }
+
+    .btn-edit,
+    .btn-delete {
+      padding: 8px 12px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.3s;
+      font-size: 0.9em;
+      font-family: inherit;
+    }
+
+    .btn-edit {
+      background: #2196F3;
+      color: white;
+    }
+
+    .btn-edit:hover {
+      background: #0b7dda;
+    }
+
+    .btn-delete {
+      background: #f44336;
+      color: white;
+    }
+
+    .btn-delete:hover {
+      background: #da190b;
+    }
+
+    /* مودال ویرایش */
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 500;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal.show {
+      display: flex;
+    }
+
+    .modal-content {
+      background: white;
+      padding: 30px;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 500px;
+      box-shadow: 0 5px 25px rgba(0,0,0,0.3);
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+
+    .modal-header h2 {
+      color: #303E19;
+    }
+
+    .close-btn {
+      background: none;
+      border: none;
+      font-size: 1.5em;
+      cursor: pointer;
+      color: #666;
+    }
+
+    .close-btn:hover {
+      color: #000;
+    }
+
+    .modal-form {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .modal-form button {
+      padding: 12px;
+      background: #303E19;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+    }
+
+    .modal-form button:hover {
+      background: #0d4715;
+    }
+
+    /* بخش سفارش ها */
+    .orders-section {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .orders-filter {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .orders-filter button {
+      padding: 10px 15px;
+      background: #f5f5f5;
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.3s;
+      font-family: inherit;
+    }
+
+    .orders-filter button.active {
+      background: #303E19;
+      color: white;
+      border-color: #303E19;
+    }
+
+    .order-card {
+      background: #f5f5f5;
+      padding: 15px;
+      margin-bottom: 15px;
+      border-radius: 6px;
+      border-left: 5px solid #303E19;
+    }
+
+    .order-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .order-id {
+      font-weight: 700;
+      color: #303E19;
+      font-size: 1.1em;
+    }
+
+    .order-status {
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 0.85em;
+      font-weight: 600;
+    }
+
+    .order-status.pending {
+      background: #FFC107;
+      color: #333;
+    }
+
+    .order-status.completed {
+      background: #4CAF50;
+      color: white;
+    }
+
+    .order-info {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 15px;
+      margin-bottom: 15px;
+      font-size: 0.95em;
+    }
+
+    .order-info-item {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .order-info-label {
+      color: #666;
+      font-size: 0.85em;
+      font-weight: 600;
+    }
+
+    .order-items {
+      background: white;
+      padding: 10px;
+      border-radius: 4px;
+      margin-bottom: 10px;
+      max-height: 150px;
+      overflow-y: auto;
+    }
+
+    .order-item {
+      padding: 8px;
+      border-bottom: 1px solid #eee;
+      font-size: 0.9em;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .order-item:last-child {
+      border-bottom: none;
+    }
+
+    .order-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-complete,
+    .btn-delete-order {
+      padding: 8px 12px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.3s;
+      font-size: 0.9em;
+      font-family: inherit;
+    }
+
+    .btn-complete {
+      background: #4CAF50;
+      color: white;
+    }
+
+    .btn-complete:hover {
+      background: #45a049;
+    }
+
+    .btn-delete-order {
+      background: #f44336;
+      color: white;
+    }
+
+    .btn-delete-order:hover {
+      background: #da190b;
+    }
+
+    /* بخش گزارش ها */
+    .reports-section {
+      background: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .report-filters {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+
+    .report-card {
+      background: linear-gradient(135deg, #303E19 0%, #0d4715 100%);
+      color: white;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      text-align: center;
+    }
+
+    .report-card h3 {
+      margin-bottom: 10px;
+      font-size: 0.9em;
+      opacity: 0.9;
+    }
+
+    .report-card-value {
+      font-size: 2em;
+      font-weight: 700;
+    }
+
+    .reports-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 30px;
+    }
+
+    .export-btn {
+      padding: 12px 20px;
+      background: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.3s;
+      font-family: inherit;
+      margin-bottom: 20px;
+    }
+
+    .export-btn:hover {
+      background: #45a049;
+    }
+
+    .empty-message {
+      text-align: center;
+      padding: 40px;
+      color: #999;
+      font-size: 1.1em;
+    }
+
+    /* رسپانسیو */
+    @media (max-width: 768px) {
+      .login-container {
+        width: 90%;
+        max-width: none;
+      }
+
+      .add-item-form {
+        grid-template-columns: 1fr;
+      }
+
+      .items-table {
+        font-size: 0.85em;
+      }
+
+      .items-table th,
+      .items-table td {
+        padding: 8px;
+      }
+
+      .order-info {
+        grid-template-columns: 1fr;
+      }
+
+      .reports-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .admin-tabs {
+        gap: 5px;
+      }
+
+      .admin-tab-btn {
+        padding: 10px 15px;
+        font-size: 0.9em;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- صفحه لاگین -->
+  <div id="login-page" class="login-page show">
+    <div class="login-container">
+      <h1>پنل مدیریت</h1>
+      <form id="login-form" class="login-form">
+        <input type="password" id="admin-password" placeholder="رمزعبور را وارد کنید" required>
+        <button type="submit">ورود</button>
+      </form>
+      <div id="login-error" class="login-error"></div>
+    </div>
+  </div>
+
+  <!-- داشبورد مدیریت -->
+  <div id="admin-dashboard" class="admin-dashboard">
+    <div class="admin-header">
+      <h1>پنل مدیریت - کافه رایکا</h1>
+      <button id="logout-btn" class="logout-btn">خروج</button>
+    </div>
+
+    <div class="admin-container">
+      <!-- تب ها -->
+      <div class="admin-tabs">
+        <button class="admin-tab-btn active" data-tab="items">مدیریت منو</button>
+        <button class="admin-tab-btn" data-tab="orders">سفارش ها</button>
+        <button class="admin-tab-btn" data-tab="reports">گزارش ها</button>
+      </div>
+
+      <!-- تب مدیریت منو -->
+      <div id="items-tab" class="admin-tab-content show">
+        <div class="items-management">
+          <h2>مدیریت آیتم های منو</h2>
+          
+          <form id="add-item-form" class="add-item-form">
+            <div class="form-group">
+              <label for="item-category">دسته‌بندی</label>
+              <select id="item-category" required>
+                <option value="">انتخاب کنید</option>
+                <option value="بر پایه قهوه">بر پایه قهوه</option>
+                <option value="قهوه نسل سوم">قهوه نسل سوم</option>
+                <option value="سرد بر پایه قهوه">سرد بر پایه قهوه</option>
+                <option value="گرم نوش">گرم نوش</option>
+                <option value="چای و دمنوش">چای و دمنوش</option>
+                <option value="بستنی و شیک">بستنی و شیک</option>
+                <option value="آبمیوه و اسموتی">آبمیوه و اسموتی</option>
+                <option value="ماکتل">ماکتل</option>
+                <option value="کیک‌ها">کیک‌ها</option>
+                <option value="صبحانه">صبحانه</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="item-name">نام آیتم</label>
+              <input type="text" id="item-name" required>
+            </div>
+
+            <div class="form-group">
+              <label for="item-description">توضیحات</label>
+              <textarea id="item-description"></textarea>
+            </div>
+
+            <div class="form-group">
+              <label for="item-image">تصویر (اختیاری)</label>
+              <input type="file" id="item-image" accept="image/*">
+            </div>
+
+            <div class="form-group">
+              <label for="item-price">قیمت</label>
+              <input type="number" id="item-price" required min="0">
+            </div>
+
+            <button type="submit" class="add-item-btn">افزودن آیتم</button>
+          </form>
+
+          <table class="items-table">
+            <thead>
+              <tr>
+                <th>نام</th>
+                <th>تصویر</th>
+                <th>دسته‌بندی</th>
+                <th>توضیحات</th>
+                <th>قیمت</th>
+                <th>عملیات</th>
+              </tr>
+            </thead>
+            <tbody id="items-table-body">
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- تب سفارش ها -->
+      <div id="orders-tab" class="admin-tab-content">
+        <div class="orders-section">
+          <h2>سفارش ها</h2>
+          
+          <div class="orders-filter">
+            <button class="filter-btn active" data-filter="all">همه</button>
+            <button class="filter-btn" data-filter="pending">در انتظار</button>
+            <button class="filter-btn" data-filter="completed">تکمیل شده</button>
+          </div>
+
+          <div id="orders-container">
+          </div>
+        </div>
+      </div>
+
+      <!-- تب گزارش ها -->
+      <div id="reports-tab" class="admin-tab-content">
+        <div class="reports-section">
+          <h2>گزارش ها</h2>
+          
+          <div class="report-filters">
+            <button class="export-btn" id="export-pdf-btn">دانلود گزارش (PDF)</button>
+            <button class="export-btn" id="export-csv-btn">دانلود گزارش (CSV)</button>
+          </div>
+
+          <div class="reports-grid" id="reports-grid">
+            <div class="report-card">
+              <h3>کل سفارش ها</h3>
+              <div class="report-card-value" id="total-orders">0</div>
+            </div>
+            <div class="report-card">
+              <h3>سفارش های تکمیل شده</h3>
+              <div class="report-card-value" id="completed-orders">0</div>
+            </div>
+            <div class="report-card">
+              <h3>کل درآمد</h3>
+              <div class="report-card-value" id="total-revenue">0 تومان</div>
+            </div>
+            <div class="report-card">
+              <h3>میانگین سفارش</h3>
+              <div class="report-card-value" id="average-order">0 تومان</div>
+            </div>
+          </div>
+
+          <h3>محبوب ترین آیتم ها</h3>
+          <table class="items-table">
+            <thead>
+              <tr>
+                <th>نام</th>
+                <th>تعداد سفارش</th>
+                <th>درآمد</th>
+              </tr>
+            </thead>
+            <tbody id="popular-items-body">
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- مودال ویرایش آیتم -->
+  <div id="edit-modal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>ویرایش آیتم</h2>
+        <button type="button" class="close-btn">&times;</button>
+      </div>
+      <form id="edit-item-form" class="modal-form">
+        <div class="form-group">
+          <label for="edit-category">دسته‌بندی</label>
+          <select id="edit-category" required>
+            <option value="">انتخاب کنید</option>
+            <option value="بر پایه قهوه">بر پایه قهوه</option>
+            <option value="قهوه نسل سوم">قهوه نسل سوم</option>
+            <option value="سرد بر پایه قهوه">سرد بر پایه قهوه</option>
+            <option value="گرم نوش">گرم نوش</option>
+            <option value="چای و دمنوش">چای و دمنوش</option>
+            <option value="بستنی و شیک">بستنی و شیک</option>
+            <option value="آبمیوه و اسموتی">آبمیوه و اسموتی</option>
+            <option value="ماکتل">ماکتل</option>
+            <option value="کیک‌ها">کیک‌ها</option>
+            <option value="صبحانه">صبحانه</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="edit-name">نام آیتم</label>
+          <input type="text" id="edit-name" required>
+        </div>
+        <div class="form-group">
+          <label for="edit-description">توضیحات</label>
+          <textarea id="edit-description"></textarea>
+        </div>
+        <div class="form-group">
+          <label for="edit-price">قیمت</label>
+          <input type="number" id="edit-price" required min="0">
+        </div>
+        <div class="form-group">
+          <label for="edit-image">تصویر جدید (اختیاری)</label>
+          <input type="file" id="edit-image" accept="image/*">
+          <img id="edit-image-preview" src="" alt="پیش‌نمایش" style="max-width:120px;display:none;margin-top:8px;" />
+        </div>
+        <button type="submit">ذخیره تغییرات</button>
+      </form>
+    </div>
+  </div>
+
+  <script src="admin.js"></script>
+</body>
+</html>
