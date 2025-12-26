@@ -1,5 +1,135 @@
-// داده‌های منو (در صورت وجود، از localStorage بارگذاری می‌شود)
-let menuData = JSON.parse(localStorage.getItem('menuData')) || [
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
+import { 
+  getFirestore, 
+  collection, 
+  getDocs,
+  addDoc,
+  onSnapshot,
+  query
+} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBjETYfARoznCccd9xRsaKFnMNdPh8vX6A",
+  authDomain: "rayka-menu.firebaseapp.com",
+  projectId: "rayka-menu",
+  storageBucket: "rayka-menu.firebasestorage.app",
+  messagingSenderId: "726356505640",
+  appId: "1:726356505640:web:4c59c6560408d11784711d"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+const menuContainer = document.getElementById('menu-container');
+const categoryNav = document.getElementById('category-nav');
+
+// Real-time listener for menu
+let menuUnsubscribe = null;
+// category icons map
+let categoryIcons = {};
+let categoriesUnsubscribe = null;
+
+// Setup real-time listener for menu
+function setupMenuRealtimeListener() {
+  if (menuUnsubscribe) {
+    menuUnsubscribe();
+  }
+
+  const menuQuery = query(collection(db, "menu"));
+  
+  menuUnsubscribe = onSnapshot(menuQuery, (snapshot) => {
+    try {
+      const groupedMenu = {};
+
+      snapshot.forEach(doc => {
+        const data = doc.data();
+        const categoryName = data.category || 'بدون دسته';
+
+        if (!groupedMenu[categoryName]) {
+          groupedMenu[categoryName] = {
+            category: categoryName,
+            items: []
+          };
+        }
+
+        groupedMenu[categoryName].items.push({
+          name: data.name,
+          description: data.description,
+          price: data.price,
+                    image: data.image || '',
+                    imagePath: data.imagePath || null
+        });
+      });
+
+      menuData = Object.values(groupedMenu);
+      renderMenu();
+      console.log('✅ Menu updated in real-time:', menuData);
+    } catch (err) {
+      console.error('❌ Error processing menu snapshot:', err);
+    }
+  }, (error) => {
+    console.error('❌ Error setting up real-time listener:', error);
+  });
+}
+
+function setupCategoriesRealtimeListener() {
+    if (categoriesUnsubscribe) categoriesUnsubscribe();
+    categoriesUnsubscribe = onSnapshot(query(collection(db, 'categories')), (snapshot) => {
+        const map = {};
+        snapshot.forEach(doc => {
+            const d = doc.data();
+            map[doc.id] = d.icon || '';
+        });
+        categoryIcons = map;
+        // re-render tabs to show icons
+        renderMenu();
+    }, (err) => console.error('categories listener error', err));
+}
+
+
+let menuData = [];
+
+// ==========================
+// Theme toggle (follow system by default)
+// ==========================
+function setupThemeToggle() {
+    const btn = document.getElementById('theme-toggle-btn');
+    if (!btn) return;
+
+    const applyTheme = (t) => {
+        document.documentElement.classList.remove('theme-light', 'theme-dark');
+        if (t === 'light' || t === 'dark') document.documentElement.classList.add('theme-' + t);
+        // update button icon
+        btn.textContent = t === 'dark' ? '☀️' : '🌙';
+    };
+
+    const saved = localStorage.getItem('theme');
+    if (saved === 'light' || saved === 'dark') {
+        applyTheme(saved);
+    } else {
+        // no saved preference -> follow system; set button to opposite icon as affordance
+        const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        btn.textContent = isDark ? '☀️' : '🌙';
+    }
+
+    btn.addEventListener('click', () => {
+        let current = null;
+        if (document.documentElement.classList.contains('theme-dark')) current = 'dark';
+        if (document.documentElement.classList.contains('theme-light')) current = 'light';
+        if (!current) current = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+
+        const next = current === 'dark' ? 'light' : 'dark';
+        applyTheme(next);
+        try { localStorage.setItem('theme', next); } catch (e) {}
+    });
+}
+
+
+
+/*
+//let menuData = [
+
     {
         category: 'بر پایه قهوه',
         items: [
@@ -126,10 +256,8 @@ let menuData = JSON.parse(localStorage.getItem('menuData')) || [
         ]
     }
 ];
-
-// اگر admin هنوز menuData را در localStorage ننوشته، می‌ماند از آرایهٔ بالا استفاده شود
-
-// گوش دادن به تغییرات storage از تب/پنجره دیگر (پنل مدیریت)
+*/
+/*
 window.addEventListener('storage', (e) => {
     if (e.key === 'menuData') {
         try {
@@ -141,6 +269,7 @@ window.addEventListener('storage', (e) => {
         renderMenu();
     }
 });
+*/
 
 // متغیر سبد خرید
 let cart = [];
@@ -254,17 +383,20 @@ function updateCartDisplay() {
 
 // تابع رندر کردن منو
 function renderMenu() {
-    const menuContainer = document.getElementById('menu-container');
-    const categoryNav = document.getElementById('category-tabs');
-    
     menuContainer.innerHTML = '';
-    categoryNav.innerHTML = '';
+    if (categoryNav) categoryNav.innerHTML = '';
+
+    if (!menuData || menuData.length === 0) {
+        console.warn('menuData خالی است');
+        return;
+    }
 
     // ایجاد تب‌های دسته‌بندی
     menuData.forEach((categoryData, index) => {
         const tabBtn = document.createElement('button');
         tabBtn.className = 'category-tab' + (index === 0 ? ' active' : '');
-        tabBtn.textContent = categoryData.category;
+        const iconUrl = categoryIcons[categoryData.category] || '';
+        tabBtn.innerHTML = (iconUrl ? `<img class="category-icon" src="${iconUrl}" alt=""> ` : '') + categoryData.category;
         tabBtn.dataset.index = index;
         
         tabBtn.addEventListener('click', () => {
@@ -287,6 +419,10 @@ function renderMenu() {
         categoryDiv.className = 'category' + (categoryIndex === 0 ? ' active' : '');
         categoryDiv.dataset.index = categoryIndex;
 
+        // header
+        const headerHtml = (categoryIcons[categoryData.category] ? `<img class="category-icon" src="${categoryIcons[categoryData.category]}" alt=""> ` : '') + `<h2>${categoryData.category}</h2>`;
+        categoryDiv.innerHTML = headerHtml;
+
         // سطح آیتم‌ها
         const itemsGrid = document.createElement('div');
         itemsGrid.className = 'items-grid';
@@ -297,8 +433,11 @@ function renderMenu() {
             card.className = 'item-card';
             card.style.cursor = 'pointer';
 
+            // image or placeholder
+            const imageHtml = item.image ? `<img src="${item.image}" style="width:100%;height:140px;object-fit:cover;">` : `<div class="placeholder-img">🍰</div>`;
+
             card.innerHTML = `
-                <div class="placeholder-img">🍰</div>
+                ${imageHtml}
                 <div class="item-info">
                     <span class="item-name">${item.name}</span>
                     <span class="item-description">${item.description}</span>
@@ -318,16 +457,23 @@ function renderMenu() {
         menuContainer.appendChild(categoryDiv);
     });
 }
-
-// تابع برای بستن سبد خالی
-function clearCart() {
-    cart = [];
-    updateCartDisplay();
-}
-
 // فراخوانی هنگام بارگذاری صفحه
 document.addEventListener('DOMContentLoaded', () => {
-    renderMenu();
+
+  // 1️⃣ منو از فایربیس - استفاده از real-time listener
+    setupMenuRealtimeListener();
+    setupCategoriesRealtimeListener();
+  console.log('✅ Real-time menu listener started');
+
+    // 2️⃣ راه‌اندازی دکمه تغییر تم
+    try {
+        setupThemeToggle();
+    } catch (e) {
+        console.warn('theme toggle init failed', e);
+    }
+
+});
+
     
     // رویداد دکمه خالی کردن سبد
     const clearCartBtn = document.getElementById('clear-cart-btn');
@@ -343,12 +489,13 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // شروع با نمایش سبد خالی
     updateCartDisplay();
-});
+
 
 // تابع برای ثبت سفارش
 function submitOrder() {
     const tableNumber = document.getElementById('table-number').value;
     
+
     // بررسی اینکه سبد خالی نیست
     if (cart.length === 0) {
         alert('سبد خرید خالی است. لطفا آیتم اضافه کنید.');
@@ -400,3 +547,28 @@ function submitOrder() {
     clearCart();
     document.getElementById('table-number').value = '';
 }
+
+
+
+async function migrateMenuToFirestore() {
+  const menuRef = collection(db, "menu");
+
+  for (const category of menuData) {
+    for (const item of category.items) {
+      await addDoc(menuRef, {
+        category: category.category,
+        name: item.name,
+        description: item.description || "",
+        price: Number(item.price),
+        image: item.image || ""
+      });
+    }
+  }
+
+  console.log("✅ MENU MIGRATED");
+}
+
+
+
+
+
