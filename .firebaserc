@@ -1,5 +1,15 @@
 {
   "projects": {
     "default": "rayka-menu"
-  }
+  },
+  "targets": {
+    "rayka-menu": {
+      "hosting": {
+        "default": [
+          "rayka-menu"
+        ]
+      }
+    }
+  },
+  "etags": {}
 }
