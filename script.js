@@ -29,6 +29,7 @@ let menuUnsubscribe = null;
 // category icons map
 let categoryIcons = {};
 let categoriesUnsubscribe = null;
+let menuData = [];
 
 // Setup real-time listener for menu
 function setupMenuRealtimeListener() {
@@ -73,13 +74,41 @@ function setupMenuRealtimeListener() {
   });
 }
 
+// One-time fetch (stable) for public site
+async function fetchMenuOnce() {
+    try {
+        const snapshot = await getDocs(query(collection(db, 'menu')));
+        const groupedMenu = {};
+        snapshot.forEach(doc => {
+            const data = doc.data();
+            const categoryName = data.category || 'بدون دسته';
+            if (!groupedMenu[categoryName]) groupedMenu[categoryName] = { category: categoryName, items: [] };
+            groupedMenu[categoryName].items.push({
+                name: data.name,
+                description: data.description,
+                price: data.price,
+                image: data.image || '',
+                imagePath: data.imagePath || null,
+                docId: doc.id
+            });
+        });
+        menuData = Object.values(groupedMenu);
+        renderMenu();
+        console.log('✅ Menu fetched once:', menuData);
+    } catch (err) {
+        console.error('❌ Error fetching menu once:', err);
+    }
+}
+
 function setupCategoriesRealtimeListener() {
     if (categoriesUnsubscribe) categoriesUnsubscribe();
     categoriesUnsubscribe = onSnapshot(query(collection(db, 'categories')), (snapshot) => {
         const map = {};
         snapshot.forEach(doc => {
             const d = doc.data();
-            map[doc.id] = d.icon || '';
+            // prefer `name` field as key (human-friendly category name), fallback to doc.id
+            const key = (d && d.name) ? d.name : doc.id;
+            map[key] = d.icon || '';
         });
         categoryIcons = map;
         // re-render tabs to show icons
@@ -87,8 +116,26 @@ function setupCategoriesRealtimeListener() {
     }, (err) => console.error('categories listener error', err));
 }
 
+// One-time fetch for categories (stable)
+async function fetchCategoriesOnce() {
+    try {
+        const snapshot = await getDocs(query(collection(db, 'categories')));
+        const map = {};
+        snapshot.forEach(doc => {
+            const d = doc.data();
+            const key = (d && d.name) ? d.name : doc.id;
+            map[key] = d.icon || '';
+        });
+        categoryIcons = map;
+        renderMenu();
+        console.log('✅ Categories fetched once:', categoryIcons);
+    } catch (err) {
+        console.error('❌ Error fetching categories once:', err);
+    }
+}
 
-let menuData = [];
+
+
 
 // ==========================
 // Theme toggle (follow system by default)
@@ -276,7 +323,16 @@ let cart = [];
 
 // تابع برای تبدیل قیمت از رشته به عدد
 function parsePrice(priceStr) {
-    return parseInt(priceStr.replace(/,/g, ''));
+    if (typeof priceStr === 'number' && !isNaN(priceStr)) return priceStr;
+    if (priceStr === null || priceStr === undefined) return 0;
+    let s = String(priceStr).trim();
+    // map Persian digits to Latin
+    const persianMap = { '۰':'0','۱':'1','۲':'2','۳':'3','۴':'4','۵':'5','۶':'6','۷':'7','۸':'8','۹':'9' };
+    s = s.replace(/[۰-۹]/g, d => persianMap[d] || d);
+    // remove any non-digit characters (commas, spaces, currency symbols)
+    s = s.replace(/[^0-9\-]/g, '');
+    const n = parseInt(s, 10);
+    return isNaN(n) ? 0 : n;
 }
 
 // تابع برای تبدیل عدد به قالب فارسی
@@ -441,7 +497,7 @@ function renderMenu() {
                 <div class="item-info">
                     <span class="item-name">${item.name}</span>
                     <span class="item-description">${item.description}</span>
-                    <span class="item-price">${item.price}</span>
+                    <span class="item-price">${formatPrice(parsePrice(item.price))} تومان</span>
                 </div>
             `;
             
@@ -460,10 +516,10 @@ function renderMenu() {
 // فراخوانی هنگام بارگذاری صفحه
 document.addEventListener('DOMContentLoaded', () => {
 
-  // 1️⃣ منو از فایربیس - استفاده از real-time listener
-    setupMenuRealtimeListener();
-    setupCategoriesRealtimeListener();
-  console.log('✅ Real-time menu listener started');
+    // 1️⃣ منو از فایربیس - برای نسخه کاربر از fetch یک‌مرتبه استفاده می‌کنیم (پایدارتر)
+        fetchMenuOnce();
+        fetchCategoriesOnce();
+    console.log('✅ Menu fetched once for public site');
 
     // 2️⃣ راه‌اندازی دکمه تغییر تم
     try {
@@ -559,7 +615,7 @@ async function migrateMenuToFirestore() {
         category: category.category,
         name: item.name,
         description: item.description || "",
-        price: Number(item.price),
+                price: parsePrice(item.price),
         image: item.image || ""
       });
     }
@@ -567,7 +623,6 @@ async function migrateMenuToFirestore() {
 
   console.log("✅ MENU MIGRATED");
 }
-
 
 
 
